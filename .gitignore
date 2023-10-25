@@ -1,0 +1,4 @@
+pdf-qa/.env
+web-retreiver/.env
+web-retreiver/samconfig.toml
+web-retreiver/__pycache__/

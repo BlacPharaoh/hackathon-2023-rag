@@ -1,0 +1,9 @@
+langchain
+llama_index
+pydantic
+python-dotenv
+Requests
+sentence-transformers
+transformers
+termios
+octoai-sdk
