@@ -1,2 +1,2 @@
-# Docker hackathon demos
-Docker hackathon 2023 OctoAI Llama2 demos
+# RAG demos
+OctoAI Llama2 demos
