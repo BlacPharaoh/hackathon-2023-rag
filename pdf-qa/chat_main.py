@@ -85,11 +85,11 @@ def ask():
 
             # Generate and print the response
             start_time = time.time()
-            
+
             response = llm_chain(user_prompt)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            response = str(response).lstrip('\n').split("\n")[-1]
+            response = str(response).lstrip("\n").split("\n")[-1]
             print(f"Response({round(elapsed_time, 1)} sec): {response}")
     except KeyboardInterrupt:
         handle_exit()

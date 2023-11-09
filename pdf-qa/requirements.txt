@@ -7,3 +7,6 @@ sentence-transformers
 transformers
 termios
 octoai-sdk
+chromadb
+pypdf2
+faiss-cpu

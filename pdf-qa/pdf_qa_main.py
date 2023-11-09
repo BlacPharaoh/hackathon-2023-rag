@@ -2,42 +2,32 @@ import logging
 import os
 import sys
 from pathlib import Path
-
 from dotenv import load_dotenv
-
 from langchain.llms.octoai_endpoint import OctoAIEndpoint as OctoAiCloudLLM
 from langchain.embeddings.octoai_embeddings import OctoAIEmbeddings
-from llama_index import (
-    LLMPredictor,
-    ServiceContext,
-    download_loader,
-    GPTVectorStoreIndex,
-    LangchainEmbedding,
-)
-
+from langchain.vectorstores import Chroma, FAISS
+from langchain.chains.question_answering import load_qa_chain
+from langchain.text_splitter import CharacterTextSplitter
+from PyPDF2 import PdfReader
 import time
+import shutil
 from termios import tcflush, TCIFLUSH
 
-# Get the current file's directory
-current_dir = os.path.dirname(os.path.abspath(__file__))
-# Change the current working directory
-os.chdir(current_dir)
-# Set logging level to CRITICAL
+# Set up logging
 logging.basicConfig(level=logging.CRITICAL)
 
 # Load environment variables
 load_dotenv()
 
-# Set the file storage directory
-FILES = "./files"
+# Define the file storage directory
+FILES_DIR = Path("files")
 
 
-def init():
+def init_files_directory():
     """
     Initialize the files directory.
     """
-    if not os.path.exists(FILES):
-        os.mkdir(FILES)
+    FILES_DIR.mkdir(exist_ok=True)
 
 
 def handle_exit():
@@ -45,22 +35,35 @@ def handle_exit():
     Handle exit gracefully.
     """
     print("\nGoodbye!\n")
-    sys.exit(1)
+    sys.exit(0)
 
 
-def ask(file):
+def clear_screen():
     """
-    Load the file, create the query engine and interactively answer user questions about the document.
+    Clear the terminal screen.
     """
-    print("Loading...")
-    # Load the PDFReader
-    PDFReader = download_loader("PDFReader")
-    loader = PDFReader()
-    documents = loader.load_data(file=Path(file))
+    term_size = shutil.get_terminal_size((80, 20))
+    print("\n" * term_size.lines, end="")
+    sys.stdout.flush()
 
-    # Initialize the OctoAiCloudLLM
+
+def extract_text_from_pdf(pdf_path):
+    """
+    Extract text from the given PDF file.
+    """
+    pdf_reader = PdfReader(pdf_path)
+    return "".join(page.extract_text() or "" for page in pdf_reader.pages)
+
+
+def setup_langchain_environment():
+    """
+    Set up the language model and embeddings.
+    """
     endpoint_url = os.getenv("ENDPOINT_URL")
-    # Set up the language model and predictor
+    if not endpoint_url:
+        raise ValueError("The ENDPOINT_URL environment variable is not set.")
+
+    # Initialize the LLM and Embeddings
     llm = OctoAiCloudLLM(
         endpoint_url=endpoint_url,
         model_kwargs={
@@ -75,55 +78,46 @@ def ask(file):
             "max_tokens": 256,
         },
     )
-
-    llm_predictor = LLMPredictor(llm=llm)
-
-    # Create the LangchainEmbedding
-    embeddings = LangchainEmbedding(
-        OctoAIEmbeddings(
-            endpoint_url="https://instructor-large-f1kzsig6xes9.octoai.run/predict"
-        )
+    embeddings = OctoAIEmbeddings(
+        endpoint_url="https://instructor-large-f1kzsig6xes9.octoai.run/predict"
     )
+    return llm, embeddings
 
-    # Create the ServiceContext
-    service_context = ServiceContext.from_defaults(
-        llm_predictor=llm_predictor, chunk_size_limit=512, embed_model=embeddings
+
+def interactive_qa_session(file_path):
+    """
+    Interactively answer user questions about the document.
+    """
+    print("Loading...")
+    raw_text = extract_text_from_pdf(file_path)
+    text_splitter = CharacterTextSplitter(
+        separator="\n", chunk_size=400, chunk_overlap=100, length_function=len
     )
+    texts = text_splitter.split_text(raw_text)
 
-    # Create the index from documents
-    index = GPTVectorStoreIndex.from_documents(
-        documents, service_context=service_context
-    )
+    llm, embeddings = setup_langchain_environment()
+    print("Creating embeddings")
+    document_search = FAISS.from_texts(texts, embeddings)
+    chain = load_qa_chain(llm, chain_type="stuff")
 
-    # Create the query engine
-    query_engine = index.as_query_engine(verbose=True, llm_predictor=llm_predictor)
-
-    # Clear the screen
-    os.system("clear")
-
-    print("Ready! Ask anything about the document")
-    print("")
-    print("Press Ctrl+C to exit")
+    clear_screen()
+    print("Ready! Ask anything about the document.")
+    print("\nPress Ctrl+C to exit.")
 
     try:
         tcflush(sys.stdin, TCIFLUSH)
         while True:
-            prompt = input("\nPrompt: ")
-            if prompt is None:
+            prompt = input("\nPrompt: ").strip()
+            if not prompt:
                 continue
-            if prompt == "exit":
+            if prompt.lower() == "exit":
                 handle_exit()
 
             start_time = time.time()
-            response = query_engine.query(prompt)
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            print()
-
-            # Transform response to string and remove leading newline character if present
-            response = str(response).lstrip("\n")
-
-            print(f"Response({round(elapsed_time, 1)} sec): {response}")
+            docs = document_search.similarity_search(prompt)
+            response = chain.run(input_documents=docs, question=prompt)
+            elapsed_time = time.time() - start_time
+            print(f"Response ({round(elapsed_time, 1)} sec): {response}\n")
     except KeyboardInterrupt:
         handle_exit()
 
@@ -133,10 +127,10 @@ def select_file():
     Select a file for processing.
     """
     os.system("clear")
-    files = [file for file in os.listdir(FILES) if file.endswith(".pdf")]
+    files = [file for file in os.listdir(FILES_DIR) if file.endswith(".pdf")]
 
     if not files:
-        return "file.pdf" if os.path.exists("file.pdf") else None
+        return "file.pdf" if os.path.exists("files/file.pdf") else None
 
     print("Select a file")
     for i, file in enumerate(files):
@@ -152,7 +146,7 @@ def select_file():
         elif selection not in possible_selections:
             select_file()
         else:
-            file_path = os.path.abspath(os.path.join(FILES, files[selection - 1]))
+            file_path = os.path.abspath(os.path.join(FILES_DIR, files[selection - 1]))
 
         return file_path
     except ValueError:
@@ -160,11 +154,10 @@ def select_file():
 
 
 if __name__ == "__main__":
-    # Initialize the file directory
-    init()
-    if file := select_file():
-        # Start the interactive query session
-        ask(file)
+    init_files_directory()
+    selected_file = select_file()
+    if selected_file:
+        interactive_qa_session(selected_file)
     else:
-        print("No files found")
+        print("No files found.")
         handle_exit()
