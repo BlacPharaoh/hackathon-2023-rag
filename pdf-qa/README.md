@@ -4,10 +4,18 @@ Load a PDF file and ask questions via llama_index, LangChain and a LLM endpoint 
 
 ## Instructions
 
+- Set up a virtual environment
+
+```
+python3 -m venv .venv
+source source .venv/bin/activate
+```
+
 - Install the requirements
 
 ```bash
-pip install -r requirements.txt -U
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
 ```
 ### Environment setup
 

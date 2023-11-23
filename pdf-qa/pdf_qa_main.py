@@ -1,22 +1,20 @@
 import logging
 import os
 import sys
-from pathlib import Path
 
 from dotenv import load_dotenv
 
-from langchain.llms.octoai_endpoint import OctoAIEndpoint as OctoAiCloudLLM
+from langchain.llms.octoai_endpoint import OctoAIEndpoint
 from langchain.embeddings.octoai_embeddings import OctoAIEmbeddings
+from llama_index.embeddings.langchain import LangchainEmbedding
 from llama_index import (
     LLMPredictor,
     ServiceContext,
-    download_loader,
     GPTVectorStoreIndex,
-    LangchainEmbedding,
+    SimpleDirectoryReader
 )
 
 import time
-from termios import tcflush, TCIFLUSH
 
 # Get the current file's directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -53,18 +51,15 @@ def ask(file):
     Load the file, create the query engine and interactively answer user questions about the document.
     """
     print("Loading...")
-    # Load the PDFReader
-    PDFReader = download_loader("PDFReader")
-    loader = PDFReader()
-    documents = loader.load_data(file=Path(file))
+    documents = SimpleDirectoryReader(
+        input_files=[os.path.abspath(file)]
+    ).load_data()
 
-    # Initialize the OctoAiCloudLLM
-    endpoint_url = os.getenv("ENDPOINT_URL")
     # Set up the language model and predictor
-    llm = OctoAiCloudLLM(
-        endpoint_url=endpoint_url,
+    llm = OctoAIEndpoint(
+        endpoint_url="https://text.octoai.run/v1/chat/completions",
         model_kwargs={
-            "model": "llama-2-7b-chat",
+            "model": "llama-2-70b-chat-fp16",
             "messages": [
                 {
                     "role": "system",
@@ -106,6 +101,7 @@ def ask(file):
     print("Press Ctrl+C to exit")
 
     try:
+        from termios import tcflush, TCIFLUSH
         tcflush(sys.stdin, TCIFLUSH)
         while True:
             prompt = input("\nPrompt: ")
@@ -128,43 +124,7 @@ def ask(file):
         handle_exit()
 
 
-def select_file():
-    """
-    Select a file for processing.
-    """
-    os.system("clear")
-    files = [file for file in os.listdir(FILES) if file.endswith(".pdf")]
-
-    if not files:
-        return "file.pdf" if os.path.exists("file.pdf") else None
-
-    print("Select a file")
-    for i, file in enumerate(files):
-        print(f"{i+1}. {file}")
-    print()
-
-    try:
-        possible_selections = list(range(len(files) + 1))
-        selection = int(input("Enter a number, or 0 to exit: "))
-
-        if selection == 0:
-            handle_exit()
-        elif selection not in possible_selections:
-            select_file()
-        else:
-            file_path = os.path.abspath(os.path.join(FILES, files[selection - 1]))
-
-        return file_path
-    except ValueError:
-        return select_file()
-
-
 if __name__ == "__main__":
     # Initialize the file directory
     init()
-    if file := select_file():
-        # Start the interactive query session
-        ask(file)
-    else:
-        print("No files found")
-        handle_exit()
+    ask("file.pdf")
