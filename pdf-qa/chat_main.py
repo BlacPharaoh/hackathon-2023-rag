@@ -41,7 +41,7 @@ def ask():
     llm = OctoAIEndpoint(
         endpoint_url=endpoint_url,
         model_kwargs={
-            "model": "llama-2-7b-chat",
+            "model": "llama-2-70b-chat-fp16",
             "messages": [
                 {
                     "role": "system",

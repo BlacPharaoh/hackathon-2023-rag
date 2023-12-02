@@ -109,7 +109,7 @@ def get_language_models():
                         "content": "Write a response that appropriately completes the request. Be clear and concise. Format your response as bullet points whenever possible.",
                     }
                 ],
-                "model": "llama-2-13b-chat-fp16",
+                "model": "llama-2-70b-chat-fp16",
                 "presence_penalty": 0,
                 "temperature": 0.1,
                 "top_p": 0.9,
@@ -167,7 +167,7 @@ def predict(data_source="octoai_docs", prompt="how to avoid cold starts?"):
         else OCTOAI_DB_NAME
     )
     vectorstore = get_vector_store(db_name)
-    llm_llama2_70b, llm_llama2_7b = get_language_models()
+    llm_llama2_70b, llm_mistral_7b = get_language_models()
 
     if vectorstore._collection.count() < 32:
         url_file = K8_JSON_FILE_PATH if db_name == K8_DB_NAME else OCTOAI_JSON_FILE_PATH
@@ -186,7 +186,7 @@ def predict(data_source="octoai_docs", prompt="how to avoid cold starts?"):
 
     results = []
     results.append(execute_and_print(llm_llama2_70b, retriever, prompt, "LLAMA2-70B"))
-    results.append(execute_and_print(llm_llama2_7b, retriever, prompt, "LLAMA-2-7B"))
+    results.append(execute_and_print(llm_mistral_7b, retriever, prompt, "MISTRAL-7B"))
 
     # Return the combined results
     return "\n".join(results)
