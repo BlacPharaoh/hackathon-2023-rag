@@ -101,32 +101,36 @@ def get_language_models():
     return (
         OctoAIEndpoint(
             octoai_api_token=OCTOAI_TOKEN,
-            endpoint_url="https://llama-2-70b-chat-demo-kk0powt97tmb.octoai.run/v1/chat/completions",
+            endpoint_url="https://text.octoai.run/v1/chat/completions",
             model_kwargs={
-                "model": "llama-2-70b-chat",
                 "messages": [
                     {
                         "role": "system",
                         "content": "Write a response that appropriately completes the request. Be clear and concise. Format your response as bullet points whenever possible.",
                     }
                 ],
-                "stream": False,
+                "model": "llama-2-13b-chat-fp16",
+                "presence_penalty": 0,
+                "temperature": 0.1,
+                "top_p": 0.9,
                 "max_tokens": 400,
                 "seed": 123,
             },
         ),
         OctoAIEndpoint(
             octoai_api_token=OCTOAI_TOKEN,
-            endpoint_url="https://llama-2-7b-chat-demo-kk0powt97tmb.octoai.run/v1/chat/completions",
+            endpoint_url="https://text.octoai.run/v1/chat/completions",
             model_kwargs={
-                "model": "llama-2-7b-chat",
+                "model": "mistral-7b-instruct-fp16",
                 "messages": [
                     {
                         "role": "system",
                         "content": "Write a response that appropriately completes the request. Be clear and concise. Format your response as bullet points whenever possible.",
                     }
                 ],
-                "stream": False,
+                "presence_penalty": 0,
+                "temperature": 0.1,
+                "top_p": 0.9,
                 "max_tokens": 400,
                 "seed": 123,
             },
