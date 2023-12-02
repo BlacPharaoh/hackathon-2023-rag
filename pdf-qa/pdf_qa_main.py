@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+
 from pathlib import Path
 from dotenv import load_dotenv
 from langchain.llms.octoai_endpoint import OctoAIEndpoint as OctoAiCloudLLM
@@ -42,6 +43,7 @@ def clear_screen():
     """
     Clear the terminal screen.
     """
+
     term_size = shutil.get_terminal_size((80, 20))
     print("\n" * term_size.lines, end="")
     sys.stdout.flush()
@@ -67,7 +69,7 @@ def setup_langchain_environment():
     llm = OctoAiCloudLLM(
         endpoint_url=endpoint_url,
         model_kwargs={
-            "model": "llama-2-7b-chat",
+            "model": "llama-2-70b-chat-fp16",
             "messages": [
                 {
                     "role": "system",
@@ -105,6 +107,7 @@ def interactive_qa_session(file_path):
     print("\nPress Ctrl+C to exit.")
 
     try:
+        from termios import tcflush, TCIFLUSH
         tcflush(sys.stdin, TCIFLUSH)
         while True:
             prompt = input("\nPrompt: ").strip()
