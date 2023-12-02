@@ -1,4 +1,4 @@
-pdf-qa/.env
-web-retreiver/.env
 web-retreiver/samconfig.toml
 web-retreiver/__pycache__/
+web-retreiver/awscli-bundle/
+.vscode/launch.json
